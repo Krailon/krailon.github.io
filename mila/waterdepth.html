@@ -116,9 +116,11 @@
               continue
             }
 
+            if (!stations[siteStn].data[y][x]) // Don't count duplicates
+              stations[siteStn].inputSize++
+
             stations[siteStn].data[y][x] = depth
             stations[siteStn].dates[y][x] = values[3].substr(1, values[3].length - 2)
-            stations[siteStn].inputSize++
 
             if (!stations[siteStn].date)
               stations[siteStn].date = stations[siteStn].dates[y][x]
@@ -201,6 +203,7 @@
         }
       }
 
+      // << TODO: This NEEDS to be done with web workers! It's just too slow... >>
       function interpolate() {
         var cnt = 0
 
@@ -217,10 +220,8 @@
           if (siteStn.indexOf("-") == -1)
             continue // Skip anything that's not a station object
 
-          if (stations[siteStn].interpolated) {
-            //output("- " + siteStn + " has already been interpolated")
+          if (stations[siteStn].interpolated)
             continue
-          }
 
           if (interpParams["K"] <= stations[siteStn].inputSize)
             interpKNN(stations[siteStn].data, interpParams["K"], interpParams["P"])
