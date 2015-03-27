@@ -12,6 +12,7 @@
       var stats = {min: 0.0, max: 147.41, allMean: 9.91, shallowMean: 2.63, deepMean: 29.57}
       var interpParams = {K: 8, P: 4} // K = number of neighbours to use; P = power exponent for Inverse Distance Weighting
       var stations = {count: 0}
+      var interpWorker
 
       function handleFileSelected(event) {
         var inputFile = event.target.files[0]
@@ -145,6 +146,11 @@
         if (siteStation) {
           var plot, dist
 
+          if (!stations[siteStation]) {
+            output("- No such station exists: " + siteStation)
+            return
+          }
+
           csv += "\"Plot\",\"Distance\",\"Depth\",\"NormMemShal\",\"NormMemMed\",\"NormMemDeep\"\n"
           site = siteStation.split("-")[0]
           stn = siteStation.split("-")[1]
@@ -157,11 +163,11 @@
               }
               else if (ri == 0) {
                 plot = "\"" + (ci < 4 ? "N" : "S") + "\""
-                dist = plot == ("N" ? 4 - ri : 4 + ri) * 10
+                dist = (plot == "N" ? 4 - ri : 4 + ri) * 10
               }
               else if (ci == 0) {
                 plot = "\"" + (ri < 4 ? "W" : "E") + "\""
-                dist = plot == ("W" ? 4 - ci : 4 + ci) * 10
+                dist = (plot == "W" ? 4 - ci : 4 + ci) * 10
               }  
               else {
                 output("- Unable to convert coordinates {" + ci + ", " + ri + "} to a grid direction and distance")
@@ -172,9 +178,9 @@
               csv += "\"" + siteStation + "\",\"" // Site-Station
 
               if (stations[siteStation].dates[ri][ci])
-                csv += stations[siteStation].dates[ri][ci] // Date
+                csv += stations[siteStation].dates[ri][ci]
               else
-                csv += stations[siteStation].date // Use center depth's date
+                csv += stations[siteStation].date // Default to site-station date
 
               csv += "\",\"" + plot + "\","
               csv += dist + "," + stations[siteStation].normShallow + "," + stations[siteStation].normMedium + "," + stations[siteStation].normDeep + "\n"
@@ -194,8 +200,8 @@
             csv += "\"" + site + "\"," // Site
             csv += "\"" + stn + "\"," // Station
             csv += "\"" + siteStn + "\"," // Site-Station
-            csv += "\"" + stations[siteStn].dates[5][5] + "\"," // Date (Use center depth reading date for now...)
-            csv += stations[siteStn].normShallow + "," // Normalized shallow membership
+            csv += "\"" + stations[siteStn].date + "\"," // Date
+            csv += "\"" + stations[siteStn].normShallow + "," // Normalized shallow membership
             csv += stations[siteStn].normMedium + "," // Normalized medium membership
             csv += stations[siteStn].normDeep + "\n" // Normalized deep membership
           }
@@ -204,19 +210,48 @@
         }
       }
 
-      // << TODO: This NEEDS to be done with web workers! It's just too slow... >>
-      function interpolate() {
-        var cnt = 0
-
+      function startInterpolation() {
         if (!stations.count) {
           output("- You must load the data to be interpolated first! This is why that button was disabled, stop messing with things...")
           return
         }
 
-        // Debug Profiling
-        var startTime = new Date()
+        if (Worker) {
+          $("#output").append($("<span id='status' class='good'>+ Interpolating...</span>"))
+          interpWorker = new Worker("interp_worker.js")
+          interpWorker.onmessage = function(event) {
+            var data = event.data
 
-        output("+ Interpolating...(this may take a while, if Chrome asks, keep waiting)")
+            if (data.type == "status") {
+              $("#status").text("+ Interpolating " + data.station + " (" + data.count + "/" + stations.count + ")")
+            }
+            else if (data.type == "finished") {
+              $("#status").text("+ Finished interpolating " + data.count + " stations in " + (data.time / 1000) + "s")
+              stations = data.stations
+            }
+            else if (data.type == "error") {
+              output("- Worker error: " + data.message)
+            }
+            else {
+              output("- Received unexpected message from worker: " + data)
+            }
+          }
+          interpWorker.postMessage({stations: stations, params: interpParams}) // Send the worker the station data and interpolation function to start interpolation
+        }
+        else {
+          // << TODO: Update the fallback to use setTimeout() to preserve page responsiveness >>
+          var cnt = interpolate() // Fallback to blocking interpolation
+
+          if (cnt)
+            output("+ Interpolated " + cnt + " stations")
+          else
+            output("- All station data has already been interpolated")
+        }
+      }
+
+      function interpolate() {
+        var cnt = 0
+
         for (var siteStn in stations) {
           if (siteStn.indexOf("-") == -1)
             continue // Skip anything that's not a station object
@@ -233,15 +268,7 @@
           cnt++
         }
 
-        if (cnt)
-          output("+ Interpolated " + cnt + " stations")
-        else
-          output("- All station data has already been interpolated")
-
-        // Debug Profiling
-        var endTime = new Date()
-        var durationSeconds = (endTime - startTime) / 1000
-        alert("Took " + durationSeconds.toFixed(2) + "s (" + (durationSeconds / 60).toFixed(2) + "m) to interpolate (" + (durationSeconds / cnt).toFixed(2) + "s/station)")
+        return cnt
       }
 
       function calcAllMembers() {
@@ -396,7 +423,7 @@
     </form>
     <form>
       <h3>Analyze</h3>
-      <button type="button" id="interpBtn" onclick="interpolate()" disabled>Interpolate</button>
+      <button type="button" id="interpBtn" onclick="startInterpolation()" disabled>Interpolate</button>
       <button type="button" id="membersBtn" onclick="calcAllMembers()" disabled>Memberships</button>
     </form>
     <form>
