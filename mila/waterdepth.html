@@ -104,10 +104,11 @@
               y = 5
             }
             else if (direct == "C") {
-              x = y = 4
+              x = y = 5
             }
             else {
               output("- Encountered unknown direction/plot: " + direct)
+              continue
             }
 
             if (x < 0 || x > 10 || y < 0 || y > 10) {
