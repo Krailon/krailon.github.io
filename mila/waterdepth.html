@@ -144,35 +144,17 @@
         var site, stn
 
         if (siteStation) {
-          var plot, dist
-
           if (!stations[siteStation]) {
             output("- No such station exists: " + siteStation)
             return
           }
 
-          csv += "\"Plot\",\"Distance\",\"Depth\",\"NormMemShal\",\"NormMemMed\",\"NormMemDeep\"\n"
+          csv += "\"XCoord\",\"YCoord\",\"Depth\",\"NormMemShal\",\"NormMemMed\",\"NormMemDeep\"\n"
           site = siteStation.split("-")[0]
           stn = siteStation.split("-")[1]
 
           for (var ri = 0; ri < stations[siteStation].data.length; ri++) {
             for (var ci = 0; ci < stations[siteStation].data[ri].length; ci++) {
-              if (ri == 4 && ci == 4) {
-                plot = "\"C\""
-                dist = 0
-              }
-              else if (ri == 0) {
-                plot = "\"" + (ci < 4 ? "N" : "S") + "\""
-                dist = (plot == "N" ? 4 - ri : 4 + ri) * 10
-              }
-              else if (ci == 0) {
-                plot = "\"" + (ri < 4 ? "W" : "E") + "\""
-                dist = (plot == "W" ? 4 - ci : 4 + ci) * 10
-              }  
-              else {
-                output("- Unable to convert coordinates {" + ci + ", " + ri + "} to a grid direction and distance")
-              }
-
               csv += "\"" + site + "\"," // Site
               csv += "\"" + stn + "\"," // Station
               csv += "\"" + siteStation + "\",\"" // Site-Station
@@ -182,8 +164,8 @@
               else
                 csv += stations[siteStation].date // Default to site-station date
 
-              csv += "\",\"" + plot + "\","
-              csv += dist + "," + stations[siteStation].normShallow + "," + stations[siteStation].normMedium + "," + stations[siteStation].normDeep + "\n"
+              csv += "\",\"" + ci + "\"," + ri + ","
+              csv += stations[siteStation].normShallow + "," + stations[siteStation].normMedium + "," + stations[siteStation].normDeep + "\n"
             }
           }
 
@@ -217,6 +199,9 @@
         }
 
         if (Worker) {
+          if (interpWorker)
+            interpWorker.terminate() // Just in case it's still running
+
           $("#output").append($("<span id='status' class='good'>+ Interpolating...</span>"))
           interpWorker = new Worker("interp_worker.js")
           interpWorker.onmessage = function(event) {
