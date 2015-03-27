@@ -39,7 +39,7 @@
         var distIndex = 5
         var depthIndex = 6
         var skipped = []
-        var values, siteStn, direct, dist, depth, x, y
+        var fields, siteStn, direct, dist, depth, x, y
 
         // Extract each station's data
         for (var li = 1; li < csv.length; li++) {
@@ -47,25 +47,25 @@
             if (!csv[li])
               continue // Skip empties
 
-            values = csv[li].split(",")
-            siteStn = values[siteStnIndex]
+            fields = csv[li].split(",")
+            siteStn = fields[siteStnIndex]
             siteStn = siteStn.substr(1, siteStn.length - 2) // Trim quotes
-            direct = values[dirIndex].toUpperCase() // <badjoke>Just in CASE</badjoke>
+            direct = fields[dirIndex].toUpperCase() // <badjoke>Just in CASE</badjoke>
             direct = direct.substr(1, direct.length - 2) // Trim quotes
-            dist = parseFloat(values[distIndex])
-            depth = parseFloat(values[depthIndex])
+            dist = parseFloat(fields[distIndex])
+            depth = parseFloat(fields[depthIndex])
 
             if (depth == 9999 || depth < 0) {
               skipped.push(depth)
               continue
             }
             if (!dist && dist != 0) {
-              output("- Invalid distance: " + values[distIndex])
+              output("- Invalid distance: " + fields[distIndex])
               skipped.push(depth)
               continue
             }
             if (!depth && depth != 0) {
-              output("- Invalid depth: " + values[depthIndex])
+              output("- Invalid depth: " + fields[depthIndex])
               skipped.push(depth)
               continue
             }
@@ -122,7 +122,7 @@
               stations[siteStn].inputSize++
 
             stations[siteStn].data[y][x] = depth
-            stations[siteStn].dates[y][x] = values[3].substr(1, values[3].length - 2)
+            stations[siteStn].dates[y][x] = fields[3].substr(1, fields[3].length - 2)
 
             if (!stations[siteStn].date)
               stations[siteStn].date = stations[siteStn].dates[y][x]
@@ -141,7 +141,7 @@
 
       function exportCSV(siteStation) {
         var csv = "\"Site\",\"Station\",\"Site-Stn\",\"Date\","
-        var site, stn
+        var site, stn, parts
 
         if (siteStation) {
           if (!stations[siteStation]) {
@@ -150,8 +150,9 @@
           }
 
           csv += "\"XCoord\",\"YCoord\",\"Depth\",\"NormMemShal\",\"NormMemMed\",\"NormMemDeep\"\n"
-          site = siteStation.split("-")[0]
-          stn = siteStation.split("-")[1]
+          parts = siteStation.split(/-(.+)?/)
+          site = parts[0]
+          stn = parts[1]
 
           for (var ri = 0; ri < stations[siteStation].data.length; ri++) {
             for (var ci = 0; ci < stations[siteStation].data[ri].length; ci++) {
@@ -164,8 +165,9 @@
               else
                 csv += stations[siteStation].date // Default to site-station date
 
-              csv += "\",\"" + ci + "\"," + ri + ","
-              csv += stations[siteStation].normShallow + "," + stations[siteStation].normMedium + "," + stations[siteStation].normDeep + "\n"
+              csv += "\"," + ci + "," + ri + "," // Grid coordinates ({X,Y})
+              csv += stations[siteStation].data[ri][ci] + "," // Data
+              csv += stations[siteStation].memberships[ri][ci]["shallow"] + "," + stations[siteStation].memberships[ri][ci]["medium"] + "," + stations[siteStation].memberships[ri][ci]["deep"] + "\n" // Membership values
             }
           }
 
@@ -177,13 +179,14 @@
             if (siteStn.indexOf("-") == -1)
               continue // Skip anything that's not a station object
 
-            site = siteStn.split("-")[0]
-            stn = siteStn.split("-")[1]
+            parts = siteStn.split(/-(.+)?/)
+            site = parts[0]
+            stn = parts[1]
             csv += "\"" + site + "\"," // Site
             csv += "\"" + stn + "\"," // Station
             csv += "\"" + siteStn + "\"," // Site-Station
             csv += "\"" + stations[siteStn].date + "\"," // Date
-            csv += "\"" + stations[siteStn].normShallow + "," // Normalized shallow membership
+            csv += stations[siteStn].normShallow + "," // Normalized shallow membership
             csv += stations[siteStn].normMedium + "," // Normalized medium membership
             csv += stations[siteStn].normDeep + "\n" // Normalized deep membership
           }
@@ -202,6 +205,7 @@
           if (interpWorker)
             interpWorker.terminate() // Just in case it's still running
 
+          $("#status").remove()
           $("#output").append($("<span id='status' class='good'>+ Interpolating...</span>"))
           interpWorker = new Worker("interp_worker.js")
           interpWorker.onmessage = function(event) {
@@ -213,6 +217,7 @@
             else if (data.type == "finished") {
               $("#status").text("+ Finished interpolating " + data.count + " stations in " + (data.time / 1000) + "s")
               stations = data.stations
+              interpWorker = null
             }
             else if (data.type == "error") {
               output("- Worker error: " + data.message)
@@ -262,6 +267,10 @@
 
         if (!stations.count) {
           output("- You must load the data to be interpolated first! This is why that button was disabled, stop messing with things...")
+          return
+        }
+        if (interpWorker) {
+          output("- To ensure calculation fidelity and accuracy, please wait until interpolation is finished to calculate memberships")
           return
         }
 
