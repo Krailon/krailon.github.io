@@ -346,6 +346,11 @@
 
         a.href = URL.createObjectURL(dataBlob)
         a.download = filename
+
+        // Firefox needs the anchor element to be in the DOM before we can click it
+        a.style.visibility = "hidden"
+        document.body.appendChild(a)
+
         a.click()
         output("+ Data saved to " + filename)
       }
