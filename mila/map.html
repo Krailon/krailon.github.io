@@ -8,7 +8,7 @@
 <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?v=3&sensor=false"></script>
 <script>
 function init() {
-  var opts = {center: new google.maps.LatLng(50.676, 120.340), zoom: 8}
+  var opts = {center: new google.maps.LatLng(50.676, -120.340), zoom: 8}
   var map = new google.maps.Map(document.getElementById("map"), opts)
   console.log("Successfully loaded map")
 }
@@ -20,10 +20,6 @@ html, body, #map {
   height: 100%;
   margin: 0;
   padding: 0;
-}
-
-#map {
-  width: 500px;
 }
 </style>
 </head>
