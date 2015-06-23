@@ -144,6 +144,7 @@
         var site, stn, parts
 
         if (siteStation) {
+          // Export specific station's interpolated data and memberships
           if (!stations[siteStation]) {
             output("- No such station exists: " + siteStation)
             return
@@ -174,6 +175,7 @@
           saveData(csv, siteStation + "_memberships.csv")
         }
         else {
+          // Export all stations
           csv += "\"NormMemShal\",\"NormMemMed\",\"NormMemDeep\"\n"
           for (var siteStn in stations) {
             if (siteStn.indexOf("-") == -1)
