@@ -1,0 +1,98 @@
+<?php
+if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] == '') {
+  header('Location: https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); // Force HTTPS
+  exit;
+}
+
+session_start();
+$err = "";
+if(isset($_POST['username'], $_POST['password'], $_POST['email'])) {
+  require('db.php'); // Load config and prepare SQL query object
+  $user = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
+  $pass = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
+  $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+
+  if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+    $err = "Invalid email address: " . $email;
+  elseif (strlen($password) != 128)
+    $err = "Invalid password hash length (expected 128-byte SHA512)";
+
+  if ($err == "") {
+    // Check existing username
+    $state = $sqli->prepare("SELECT userid FROM webusers WHERE username = ?");
+
+    if ($state) {
+      $state->bind_param('s', $username);
+      $state->execute();
+      $state->store_result();
+
+      if ($state->num_rows > 0)
+        $err = "Username is taken";
+    }
+    else {
+      $err = "Database error: failed to prepare first statement";
+    }
+
+    $state->close();
+  }
+
+  if ($err == "") {
+    // Check existing email address
+    $state = $sqli->prepare("SELECT userid FROM webusers WHERE email = ?");
+
+    if ($state) {
+      $state->bind_param('s', $email);
+      $state->execute();
+      $state->store_results();
+
+      if ($state->num_rows > 0) {
+        $err = "Email already associated with an account";
+      }
+      else {
+        $err = "Database error: failed to prepare second statement";
+      }
+    }
+  }
+
+  if ($err == "") {
+    // Add new user to DB
+    $state = $sqli->prepare("INSERT ...");
+  }
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<title>DustDuino Web Registration</title>
+<script src="sha512.js"></script>
+<script>
+function verifyForm(form) {
+  
+}
+</script>
+<style>
+body {
+  text-align: center;
+}
+
+input {
+  margin: 5px;
+}
+</style>
+</head>
+<body>
+  <h1>DustDuino Web Registration</h1>
+  <form action="#" method="POST">
+    <label for="username">Username:</label>&nbsp;<input type="text" name="username" required="required" pattern="\w+"><br>
+    <label for="password">Password:</label>&nbsp;<input type="password" name="password" required="required" pattern=".{5,}"><br>
+    <label for="email">E-mail:</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" name="email" required="required" pattern="[\w\d-\.+]+@[\w\d]+\.[\w]{2,}"><br>
+    <button type="button" onclick="verifyForm(this.form)">Register</button>
+  </form>
+  <div class="errors">
+  <?php
+  if (!empty($err))
+    echo "Error: $err";
+  ?>
+  </div>
+</body>
+</html>

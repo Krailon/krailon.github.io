@@ -1,0 +1,151 @@
+<?php
+session_start();
+
+$err = "";
+if (isset($_GET['logout'])) {
+  unset($_SESSION['userid']);
+  unset($_SESSION['username']);
+  unset($_SESSION['sessionkey']);
+}
+elseif (isset($_SESSION['userid'], $_SESSION['sessionkey'])) {
+  require('dustcore.php');
+  exit;
+}
+elseif (isset($_POST['username'], $_POST['passhash'])) {
+  // Perform login
+  $username = $_POST['username'];
+  $passhash = $_POST['passhash'];
+
+  if (doLogin($username, $passhash)) {
+    require('dustcore.php');
+    exit;
+  }
+  else {
+    error_log("Error: login failed for $username");
+  }
+}
+
+function doLogin($username, $passhash) {
+  global $err;
+  require('db.php');
+
+  if (empty($username)) {
+    $err = "Empty username is not valid";
+    return False;
+  }
+  elseif (empty($passhash) || strlen($passhash) < MINPASSLEN) {
+    $err = "Password must be " . MINPASSLEN . "+ characters";
+    return False;
+  }
+
+  $state = $sqli->prepare("SELECT userid FROM " . DBUSERTABLE . " WHERE username = ? AND password = ?");
+  if ($state) {
+    $state->bind_param('ss', $username, $passhash);
+    $state->execute();
+    $state->store_result();
+    $state->bind_result($userid);
+    $state->fetch();
+
+    if ($state->num_rows == 1) {
+      $_SESSION['userid'] = $userid;
+      $_SESSION['username'] = $username;
+      $_SESSION['sessionkey'] = hash('sha512', $passhash . $_SERVER['HTTP_USER_AGENT']);
+      $state->close();
+      return True;
+    }
+    elseif ($state->num_rows > 1) {
+      error_log("Error: login query returned multiple users: $username/$passhash");
+      $err = "Internal error: multiple users matched";
+    }
+    else {
+      $err = "Username and password don't match";
+    }
+  }
+  else {
+    $err = "Database error: failed to prepare login statement";
+  }
+
+  $state->close();
+  return False;
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<title>DustDuino Web Login</title>
+<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="sha512.js"></script>
+<script>
+function verifyForm(form) {
+  if (form["username"] != undefined) {
+    if (form["username"].value == "") {
+      $(".err").text("Error: username can't be blank")
+      return
+    }
+  }
+  else {
+    $(".err").text("Internal Error: can't find username box")
+  }
+
+  if (form["password"] != undefined) {
+    if (form["password"].value.length < 6) {
+      $(".err").text("Error: password must be 6+ characters")
+      return
+    }
+
+    var hasher = new jsSHA("SHA-512", "TEXT")
+    var hashInp = document.createElement("input")
+    var pass = form["password"].value
+
+    form.removeChild(form["password"]) // Remove plaintext password input from form
+    hasher.update(pass)
+    hashInp.name = "passhash"
+    hashInp.type = "hidden"
+    hashInp.value = hasher.getHash("HEX")
+    form.appendChild(hashInp) // Add hidden input to form with hashed password
+    form.submit()
+  }
+  else {
+    $(".err").text("Internal Error: can't find password box")
+  }
+}
+
+$(document).ready(function() {
+  $("input").keypress(function(event) {
+    if (event.which == 13) {
+      event.preventDefault()
+      verifyForm(event.target.form)
+    }
+  })
+})
+</script>
+<style>
+body {
+  text-align: center;
+}
+
+input {
+  margin: 5px;
+}
+
+.err {
+  color: red;
+}
+</style>
+</head>
+<body>
+  <h1>DustDuino Web Login</h1>
+  <form method="POST">
+    <label for="username">Username:</label>&nbsp;<input type="text" name="username" required="required" pattern="\w+"><br>
+    <label for="password">Password:</label>&nbsp;<input type="password" name="password" required="required"><br>
+    <button type="button" onclick="verifyForm(this.form)">Log In</button>
+  </form>
+  <div class="err">
+  <?php
+  if (!empty($err)) {
+    echo "Error: $err";
+  }
+  ?>
+  </div>
+</body>
+</html>

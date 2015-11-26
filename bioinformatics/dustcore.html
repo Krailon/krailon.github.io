@@ -1,0 +1,123 @@
+<?php
+  if (!isset($_SESSION['userid'], $_SESSION['username'], $_SESSION['sessionkey'])) {
+    header("HTTP/1.1 401 Unauthorized");
+    echo "<h1 class='err'>You must be logged in to access this page</h1>";
+    exit;
+  }
+?>
+<!DOCTYPE html>
+<head>
+<title>DustDuino Web Interface</title>
+<link rel="stylesheet" type="text/css" href="bokeh.min.css">
+<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="bokeh.min.js"></script>
+<script src="plot.js"></script>
+<script>
+var MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+var csv
+
+function display() {
+  var form = $("form")
+
+  // Inject CSV data into Bokeh graph data structure (no Python back-end so this will have to suffice)
+  //all_models[18].attributes.data = parseCSV()
+  //renderPlot()
+}
+
+function parseCSV() {
+  if (csv === undefined) return {}
+}
+
+function handleFileSelected(event) {
+  var theFile = event.target.files[0]
+  var reader = new FileReader()
+
+  if (theFile.name.indexOf(".csv") != theFile.name.length - 4 && !confirm("The selected file doesn't have a .csv extension, are you sure it contains DustDuino data?")) {
+    return
+  }
+  else if (theFile.size > MAX_FILE_SIZE){
+    printStatus("Error: the selected file is too big (max " + MAX_FILE_SIZE + " bytes, but '" + theFile.name + "' contains " + theFile.size + " bytes)")
+    return
+  }
+
+  reader.onload = (function() {
+    return function(e) {
+      csv = e.target.result
+      printStatus("Read " + e.total + " bytes from '" + theFile.name + "'")
+    }
+  })()
+
+  reader.readAsArrayBuffer(theFile)
+}
+
+function printStatus(status) {
+  var div = $("#status")
+
+  div.html(div.html() + "<br>" + status)
+}
+
+$(document).ready(function() {
+  $("#csv").on("change", handleFileSelected)
+})
+</script>
+<style>
+body {
+  text-align: center;
+}
+
+form {
+  width: 50%;
+  margin: auto;
+  background-color: rgba(210, 210, 210, 0.5);
+  padding: 5px;
+  border: 1px solid black;
+}
+
+#fileSelect {
+  margin: auto;
+  width: 50%;
+  padding: 5px;
+}
+
+#fieldList {
+  list-style: none;
+  width: 30%;
+  margin: auto;
+}
+
+.err {
+  color: red;
+}
+</style>
+</head>
+<body>
+  <h1>DustDuino Web Interface</h1>
+  <div>
+    Welcome <?php echo $_SESSION['username']; ?>&nbsp;|&nbsp;
+    <a href="?logout">Log Out</a>
+  </div>
+  <form method="POST">
+    <h3>DustDuino Data</h3>
+    <div id="fileSelect">
+      <input type="file" id="csv" name="csv" accept="csv">
+    </div>
+    <h3>Fields</h2>
+    <div id="fields">
+      <ul id="fieldList">
+        <li><input type="checkbox" name="date">&nbsp;Date</li>
+        <li><input type="checkbox" name="time">&nbsp;Time</li>
+        <li><input type="checkbox" name="temp">&nbsp;Temperature</li>
+        <li><input type="checkbox" name="pressure">&nbsp;Atmospheric Pressure</li>
+        <li><input type="checkbox" name="pm10count">&nbsp;PM10 Count</li>
+        <li><input type="checkbox" name="pm25count">&nbsp;PM2.5 Count</li>
+        <li><input type="checkbox" name="pm10concent">&nbsp;PM10 Concentration</li>
+        <li><input type="checkbox" name="pm25concent">&nbsp;PM2.5 Concentration</li>
+      </ul>
+      <button type="button" onclick="display()" disabled="disabled">Display</button>
+    </div>
+  </form>
+  <h3>Status</h3>
+  <div id="status"></div><br>
+  <div class="plotdiv" id="5736d491-c229-4ff7-a0b3-db7434e5809a"></div>
+</body>
+</html>

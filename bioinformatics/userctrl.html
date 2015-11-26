@@ -1,0 +1,35 @@
+<?php
+if (!isset($_SERVER['userid'], $_SERVER['username'], $_SERVER['sessionkey'])) {
+  header("401 Unauthorized");
+  echo "<h1>Not Authorized: you must be logged in to view this page</h1>";
+  exit;
+}
+elseif (isset($_POST['oldpass'], $_POST['newpass'])) {
+  
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<title>User Account Control</title>
+<script>
+function verifyPassChange(form) {
+  
+}
+</script>
+<style>
+body {
+  text-align: center;
+}
+</style>
+</head>
+<body>
+  <h3>Password Change</h3>
+  <form method="POST">
+    <label for="oldpass">Old Password:</label>&nbsp;<input type="password" name="oldpass"><br>
+    <label for="newpass">New Password:</label>&nbsp;<input type="password" name="newpass"><br>
+    <label for="repeat">Type Again:</label>&nbsp;<input type="password" name="repeat"><br>
+    <
+  </form>
+</body>
+</html>
