@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- TODO: favicon //-->
+    <title>RLWE Tools</title>
+    <style>
+      body {
+        text-align: center;
+      }
+
+      div.polynomial {
+        margin: 10px;
+      }
+
+      input.value {
+        width: 50px;
+      }
+
+      input.exponent {
+        width: 30px;
+      }
+
+      input:placeholder-shown {
+        outline: salmon;
+        outline-style: dotted;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="ring_algebra">
+      <h1>Ring Algebra</h1>
+      <form onsubmit="return false">
+        <div id="modulus_q">
+          <span>q = </span>
+          <input type="number" class="value" name="modulus" id="modulus" min="2" value="13">
+        </div>
+        <div class="polynomial" id="algebra_poly_a">
+          <span>a(x)&nbsp;=&nbsp;</span>
+          <span class="term" id="polynomial_a_term0">
+            (<input type="number" class="value" name="polynomial_a_value0" id="polynomial_a_value0" min="1" placeholder="">^
+            <input type="number" class="exponent" name="polynomial_a_exp0" id="polynomial_a_exp0" min="0" value="0" placeholder="">)
+          </span>
+          <button type="button" id="add_aa_term_btn">+</button>
+          <button type="button" id="del_aa_term_btn" disabled>-</button>
+        </div>
+        <div class="polynomial" id="algebra_poly_b">
+          <span>b(x)&nbsp;=&nbsp;</span>
+          <span class="term" id="polynomial_b_term0">
+            (<input type="number" class="value" name="polynomial_b_value0" id="polynomial_b_value0" min="1" placeholder="">^
+            <input type="number" class="exponent" name="polynomial_b_exp0" id="polynomial_b_exp0" min="0" value="0" placeholder="">)
+          <span>
+          <button type="button" id="add_ab_term_btn">+</button>
+          <button type="button" id="del_ab_term_btn" disabled>-</button>
+        </div><br>
+        <button class="operation" type="button" id="sum_btn" disabled>a+b</button>
+        <button class="operation" type="button" id="diff_btn" disabled>a-b</button>
+        <button class="operation" type="button" id="prod_btn" disabled>a*b</button>
+        <!-- TODO: reduce a by b //-->
+      </form>
+      <div id="result"></div>
+    </section>
+    <hr>
+    <section id="rlwe_kex">
+      <h1>RLWE Key Exchange ("New Hope")</h1>
+      <div>
+        <h2>Parameters</h2>
+        <div>
+          <span>q&nbsp;=&nbsp;</span>
+          <input type="number" class="value" name="kex_modulus" id="kex_modulus" min="2" value="25601" placeholder=""><br>
+        </div>
+        <div class="polynomial" id="kex_poly_phi">
+          <span>φ&nbsp;=&nbsp;</span>
+          <span class="term" id="kex_poly_phi_term0">
+            (<input type="number" class="value" name="kex_phi_value0" id="kex_phi_value0" min="1" placeholder="">^
+            <input type="number" class="exponent" name="kex_phi_exp0" id="kex_phi_exp0" min="0" value="0" placeholder="">)
+          </span>
+          <button type="button" id="add_phi_term_btn">+</button>
+          <button type="button" id="del_phi_term_btn" disabled>-</button>
+        </div>
+        <div class="polynomial" id="kex_poly_a">
+          <span>a&nbsp;=&nbsp;</span>
+          <span class="term" id="kex_poly_a_term0">
+            (<input type="number" class="value" name="kex_a_value0" id="kex_a_value0" min="1" placeholder="">^
+            <input type="number" class="exponent" name="kex_a_exp0" id="kex_a_exp0" min="0" value="0" placeholder="">)
+          </span>
+          <button type="button" id="add_a_term_btn">+</button>
+          <button type="button" id="del_a_term_btn" disabled>-</button>
+        </div>
+      </div>
+      <div>
+        <h2>Initiate</h2>
+        <form onsubmit="return false">
+          <button type="button" id="kex_init_btn" disabled>Generate</button>
+          <!-- <div id="kex_si_out">Secret Key:&nbsp;</div> //-->
+          <div id="kex_pi_out">Public Key:&nbsp;</div>
+        </form>
+      </div>
+      <div>
+        <h2>Respond</h2>
+        <form onsubmit="return false">
+          <div class="polynomial" id="kex_poly_pi">
+            <span>Initiator Public Key:&nbsp;</span>
+            <span class="term" id="kex_poly_pi_term0">
+              (<input type="number" class="value" name="kex_pi_value0" id="kex_pi_value0" min="1" placeholder="">^
+              <input type="number" class="exponent" name="kex_pi_exp0" id="kex_pi_exp0" min="0" value="0" placeholder="">)
+            </span>
+            <button type="button" id="add_pi_term_btn">+</button>
+            <button type="button" id="del_pi_term_btn" disabled>-</button>
+          </div><br>
+          <button type="button" id="kex_resp_btn" disabled>Generate</button>
+          <!-- <div id="kex_sr_out">Secret Key:&nbsp;</div> //-->
+          <div id="kex_pr_out">Public Key:&nbsp;</div>
+          <div id="kex_w_out">Reconciliation:&nbsp;</div>
+          <div id="kex_skr_out">Keystream:&nbsp;</div>
+        </form>
+      </div>
+      <div>
+        <h2>Finalize</h2>
+        <div class="polynomial" id="kex_poly_pr">
+          <span>Responder Public Key:&nbsp;</span>
+          <span class="term" id="kex_poly_pr_term0">
+            (<input type="number" class="value" name="kex_pr_value0" id="kex_pr_value0" min="1" placeholder="">^
+            <input type="number" class="exponent" name="kex_pr_exp0" id="kex_pr_exp0" min="0" value="0" placeholder="">)
+          </span>
+          <button type="button" id="add_pr_term_btn">+</button>
+          <button type="button" id="del_pr_term_btn" disabled>-</button>
+        </div>
+        <div class="polynomial" id="kex_poly_w">
+          <span>w&nbsp;=&nbsp;</span>
+          <span class="term" id="kex_poly_w_term0">
+            (<input type="number" class="value" name="kex_w_value0" id="kex_w_value0" min="1" placeholder="">^
+            <input type="number" class="exponent" name="kex_w_exp0" id="kex_w_exp0" min="0" value="0" placeholder="">)
+          </span>
+          <button type="button" id="add_w_term_btn">+</button>
+          <button type="button" id="del_w_term_btn" disabled>-</button>
+        </div><br>
+        <button type="button" id="kex_fin_btn" disabled>Generate</button>
+        <div id="kex_ski_out">Keystream:&nbsp;</div>
+      </div>
+    </section>
+    <section style="display: none;">
+      <!-- MathML testing //-->
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+        <mo>[</mo>
+        <mo>(</mo>
+        <mn>5</mn>
+        <msup>
+          <mi>x</mi>
+          <mn>2</mn>
+        </msup>
+        <mo>+</mo>
+        <mn>2</mn>
+        <mi>x</mi>
+        <mo>)</mo>
+        <mo>/</mo>
+        <mo>(</mo>
+        <msup>
+          <mi>x</mi>
+          <mn>3</mn>
+        </msup>
+        <mo>-</mo>
+        <msup>
+          <mi>x</mi>
+          <mn>2</mn>
+        </msup>
+        <mo>)</mo>
+        <mo>]</mo>
+      </math>
+    </section>
+    <br><br><br>
+    <footer>
+      <a href="https://www.mathjax.org">
+        <img title="Powered by MathJax" src="https://www.mathjax.org/badge/badge-square-3.png" border="0" alt="Powered by MathJax" />
+      </a>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer></script>
+    <script type="module">
+      import init, { add_polynomials, sub_polynomials, mul_polynomials, js_rlwe_kex_initiate, js_rlwe_kex_respond, js_rlwe_kex_finish } from "./fhe.js";
+
+      await init();
+      console.log("RUST_BACKTRACE=1");
+
+      // [ Polynomial Test ]
+
+      function handlePolyKeyup(evt) {
+        // TODO: debounce this
+        let inputs = document.getElementsByTagName("input");
+        let disable = false;
+
+        for (let element of inputs) {
+          if (isNaN(element.valueAsNumber)) {
+            disable = true;
+            break;
+          }
+        }
+
+        [...document.getElementsByClassName("operation")].forEach(element => {
+          if (element.id.startsWith("polynomial")) {
+            element.disabled = disable;
+          }
+        });
+      };
+
+      function getA() {
+        let aTerms = [];
+        let i = 0;
+
+        while (true) {
+          let valueElement = document.getElementById(`polynomial_a_value${i}`);
+          if (valueElement) {
+            let value = value_element.valueAsNumber;
+            let exponent = document.getElementById(`polynomial_a_exp${i++}`).valueAsNumber;
+
+            if (!isNaN(value) && !isNaN(exponent)) {
+              a_terms.push([exponent, value]);
+            }
+          }
+          else {
+            return aTerms;
+          }
+        }
+      };
+
+      function getB() {
+        let bTerms = [];
+        let i = 0;
+
+        while (true) {
+          let value_element = document.getElementById(`polynomial_b_value${i}`);
+          if (value_element) {
+            let exponent = document.getElementById(`polynomial_b_exp${i++}`).valueAsNumber;
+            bTerms.push([exponent, value_element.valueAsNumber]);
+          }
+          else {
+            return b_terms;
+          }
+        }
+      };
+
+      function addPolyTerm() {
+        // TODO
+      }
+
+      function addATerm(evt) {
+        // TODO
+      };
+
+      function addBTerm(evt) {
+        // TODO
+      };
+
+      function deleteATerm(evt) {
+        // TODO
+      }
+
+      function deleteBTerm(evt) {
+        // TODO
+      }
+
+      function aPlusB(evt) {
+        let a = getA();
+        let b = getB();
+        let modulus = document.getElementById("modulus").valueAsNumber;
+        let sum = add_polynomials(a, b, modulus);
+
+        document.getElementById("result").innerText = sum;  // TODO: print polynomial properly
+      };
+
+      function aMinusB(evt) {
+        let a = getA();
+        let b = getB();
+        let modulus = document.getElementById("modulus").valueAsNumber;
+        let sum = sub_polynomials(a, b, modulus);
+
+        document.getElementById("result").innerText = sum;  // TODO: print polynomial properly
+      };
+
+      function aTimesB(evt) {
+        let a = getA();
+        let b = getB();
+        let modulus = document.getElementById("modulus").valueAsNumber;
+        let sum = mul_polynomials(a, b, modulus);
+
+        document.getElementById("result").innerText = sum;  // TODO: print polynomial properly
+      };
+
+      // [ RLWE-KEX ]
+
+      function handleKexParamKeyup(evt) {
+        // TODO: debounce this
+        if (evt.target.id.indexOf("exp") == -1 && evt.target.valueAsNumber == 0) {
+          evt.target.value = null;
+        }
+
+        let disable = false;
+        let inputs = document.getElementsByTagName("input");
+        for (let element of inputs) {
+          // Initiate only depends on parameters
+          let eid = element.id;
+          if (eid != "kex_modulus" && !eid.startsWith("kex_phi_") && !eid.startsWith("kex_a_")) {
+            continue;
+          }
+
+          if (isNaN(element.valueAsNumber)) {
+            disable = true;
+            break;
+          }
+        }
+
+        document.getElementById("kex_init_btn").disabled = disable;
+        handleKexRespKeyup(evt);
+        handleKexFinKeyup(evt);
+      };
+
+      function handleKexRespKeyup(evt) {
+        // TODO: debounce this
+        if (evt.target.id.indexOf("exp") == -1 && evt.target.valueAsNumber == 0) {
+          evt.target.value = null;
+        }
+
+        let disable = false;
+        let inputs = document.getElementsByTagName("input");
+        for (let element of inputs) {
+          // Respond depends on parameters & initiator public key (pI)
+          let eid = element.id;
+          if (eid != "kex_modulus" && !eid.startsWith("kex_phi_") && !eid.startsWith("kex_a_") &&
+              !eid.startsWith("kex_pi_")) {
+            continue;
+          }
+
+          if (isNaN(element.valueAsNumber)) {
+            disable = true;
+            break;
+          }
+        }
+
+        document.getElementById("kex_resp_btn").disabled = disable
+      }
+
+      function handleKexFinKeyup(evt) {
+        // TODO: debounce this
+        if (evt.target.id.indexOf("exp") == -1 && evt.target.valueAsNumber == 0) {
+          // 0 is only allowed in exponents, not coefficients/values
+          evt.target.value = null;
+        }
+
+        let disable = false;
+        let inputs = document.getElementsByTagName("input");
+        for (let element of inputs) {
+          // Finish depends on parameters, responder public key (pR), 
+          let eid = element.id;
+          if (eid != "kex_modulus" && !eid.startsWith("kex_phi_") && !eid.startsWith("kex_a_") &&
+              !eid.startsWith("kex_pr_") && !eid.startsWith("kex_w_")) {
+            continue;
+          }
+
+          if (isNaN(element.valueAsNumber)) {
+            disable = true;
+            break;
+          }
+        }
+
+        document.getElementById("kex_fin_btn").disabled = disable
+      }
+
+      function addKexPolyTerm(polynomialName, termIndex) {
+        let termSpan = document.createElement("span");
+        termSpan.className = "term";
+        termSpan.id = `kex_poly_${polynomialName}_term${termIndex}`;
+        termSpan.append("(");
+
+        let valueInput = document.createElement("input");
+        valueInput.type = "number";
+        valueInput.className = "value";
+        valueInput.name = `kex_${polynomialName}_value${termIndex}`;
+        valueInput.id = valueInput.name;
+        valueInput.placeholder = "";
+        termSpan.append(valueInput);
+
+        let exponentInput = document.createElement("input");
+        exponentInput.type = "number";
+        exponentInput.className = "value";
+        exponentInput.id = `kex_${polynomialName}_exp${termIndex}`;
+        exponentInput.name = exponentInput.id;
+        exponentInput.placeholder = "";
+        termSpan.append(valueInput);
+
+        termSpan.append(")");
+        return termSpan;
+      }
+
+      function addPhiTerm(evt) {
+        let termIndex = evt.target.parentElement.getElementsByTagName("input").length;
+        let termSpan = addKexPolyTerm("phi", termIndex);
+
+        termSpan.getElementsByTagName("input").forEach(inp => inp.onkeyup = handleKexParamKeyup);
+      };
+
+      function addKexATerm(evt) {
+        let termIndex = evt.target.parentElement.getElementsByTagName("input").length;
+        let termSpan = addKexPolyTerm("a", termIndex);
+
+        termSpan.getElementsByTagName("input").forEach(inp => inp.onkeyup = handleKexParamKeyup);
+      }
+
+      function addPiTerm(evt) {
+        let termIndex = evt.target.parentElement.getElementsByTagName("input").length;
+        let termSpan = addKexPolyTerm("pi", termIndex);
+
+        termSpan.getElementsByTagName("input").forEach(inp => inp.onkeyup = handleKexRespKeyup);
+      };
+
+      function addPrTerm(evt) {
+        let termIndex = evt.target.parentElement.getElementsByTagName("input").length;
+        let termSpan = addKexPolyTerm("pr", termIndex);
+
+        termSpan.getElementsByTagName("input").forEach(inp => inp.onkeyup = handleKexFinKeyup);
+      };
+
+      function addWTerm(evt) {
+        let termIndex = evt.target.parentElement.getElementsByTagName("input").length;
+        let termSpan = addKexPolyTerm("w", termIndex);
+
+        termSpan.getElementsByTagName("input").forEach(inp => inp.onkeyup = handleKexFinKeyup);
+      };
+
+      function deleteKexPolyTerm(evt) {
+        // TODO
+      }
+
+      function deletePhiTerm(evt) {
+        // TODO
+      }
+
+      function deleteKexATerm(evt) {
+        // TODO
+      }
+
+      function deletePiTerm(evt) {
+        // TODO
+      }
+
+      function deletePrTerm(evt) {
+        // TODO
+      }
+
+      function deleteWTerm(evt) {
+        // TODO
+      }
+
+      function kexInitiate(evt) {
+        js_rlwe_kex_initiate();
+      }
+
+      function kexRespond(evt) {
+        js_rlwe_kex_respond();
+      }
+
+      function kexFinish(evt) {
+        js_rlwe_kex_finish();
+      }
+
+      function bind_input_handlers(element_id, event_handler) {
+        let element = document.getElementById(element_id)
+
+        element.onkeyup = event_handler;
+        element.onchange = event_handler;
+      }
+
+      /// Bind event handlers
+      // Polynomial term values & exponents
+      bind_input_handlers("polynomial_a_value0", handlePolyKeyup);
+      bind_input_handlers("polynomial_a_exp0", handlePolyKeyup);
+      bind_input_handlers("polynomial_b_value0", handlePolyKeyup);
+      bind_input_handlers("polynomial_b_exp0", handlePolyKeyup);
+      bind_input_handlers("kex_modulus", handleKexParamKeyup);
+      bind_input_handlers("kex_phi_value0", handleKexParamKeyup);
+      bind_input_handlers("kex_phi_exp0", handleKexParamKeyup);
+      bind_input_handlers("kex_a_value0", handleKexParamKeyup);
+      bind_input_handlers("kex_a_exp0", handleKexParamKeyup);
+      bind_input_handlers("kex_pi_value0", handleKexRespKeyup);
+      bind_input_handlers("kex_pi_exp0", handleKexRespKeyup);
+      bind_input_handlers("kex_pr_value0", handleKexFinKeyup);
+      bind_input_handlers("kex_pr_exp0", handleKexFinKeyup);
+      bind_input_handlers("kex_w_value0", handleKexFinKeyup);
+      bind_input_handlers("kex_w_exp0", handleKexFinKeyup);
+      // Polynomial add/delete term buttons
+      document.getElementById("add_aa_term_btn").onclick = addATerm;
+      document.getElementById("add_ab_term_btn").onclick = addBTerm;
+      document.getElementById("add_phi_term_btn").onclick = addPhiTerm;
+      document.getElementById("add_a_term_btn").onclick = addKexATerm;
+      document.getElementById("add_pi_term_btn").onclick = addPiTerm;
+      document.getElementById("add_pr_term_btn").onclick = addPrTerm;
+      document.getElementById("del_aa_term_btn").onclick = deleteATerm;
+      document.getElementById("del_ab_term_btn").onclick = deleteBTerm;
+      document.getElementById("del_phi_term_btn").onclick = deletePhiTerm;
+      document.getElementById("del_a_term_btn").onclick = deleteKexATerm;
+      document.getElementById("del_pi_term_btn").onclick = deletePiTerm;
+      document.getElementById("del_pr_term_btn").onclick = deletePrTerm;
+      document.getElementById("del_w_term_btn").onclick = deletePrTerm;
+      
+      // Operations
+      document.getElementById("sum_btn").onclick = aPlusB;
+      document.getElementById("diff_btn").onclick = aMinusB;
+      document.getElementById("prod_btn").onclick = aTimesB;
+      document.getElementById("kex_init_btn").onclick = kexInitiate;
+      document.getElementById("kex_resp_btn").onclick = kexRespond;
+      document.getElementById("kex_fin_btn").onclick = kexFinish;
+    </script>
+  </body>
+</html>
