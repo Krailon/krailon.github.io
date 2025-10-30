@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="rubiks-cube.png" />
+    <title>HyperSudoCube</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: #111;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+      // Extended Sudoku symbol space (symbol + color, 4x4=16 combos)
+      const SYMBOLS = ['♥', '▲', '◆', '★'];
+      const COLORS = ['red', 'green', 'blue', 'yellow'];
+      const ORIGIN = new THREE.Object3D();
+
+      // Init
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x202020);
+
+      const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
+      camera.position.set(5, 5, 5);
+      camera.lookAt(scene.position);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(innerWidth, innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      function makeMaterial(symbol, color, size=256) {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = 'black';  // TODO: consider something softer like grey
+        ctx.fillRect(0, 0, size, size);
+
+        // Symbol
+        ctx.fillStyle = color;
+        ctx.font = 'bold 180px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(symbol, size / 2, size / 2);
+
+        let texture = new THREE.CanvasTexture(canvas);
+        return new THREE.MeshStandardMaterial({ map: texture });
+      }
+
+      // Prepare symbol materials
+      let symbolMaterials = new Map();
+      for (let symbol of SYMBOLS) {
+        for (let color of COLORS) {
+          symbolMaterials.set(`${symbol},${color}`, makeMaterial(symbol, color));
+        }
+      }
+
+      // 4x4 Rubik's Cube
+      let cubies = new Map();
+      for (let x = 0; x < 4; x++) {
+        for (let y = 0; y < 4; y++) {
+          for (let z = 0; z < 4; z++) {
+            if (x > 0 && x < 3 && y > 0 && y < 3 && z > 0 && z < 3) {
+              continue;  // Hollow
+            }
+
+            // Interior faces stay colored to provide extra visual orientation info
+            const cubeMaterials = [  // [+x, -x, +y, -y, +z, -z]
+              new THREE.MeshStandardMaterial({ color: 0xFF0000 }),
+              new THREE.MeshStandardMaterial({ color: 0x00FF00 }),
+              new THREE.MeshStandardMaterial({ color: 0x00000FF }),
+              new THREE.MeshStandardMaterial({ color: 0xFFFF00 }),
+              new THREE.MeshStandardMaterial({ color: 0xFF00FF }),
+              new THREE.MeshStandardMaterial({ color: 0x00FFFF })
+            ];
+            const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);  // Unit cube
+            const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
+
+            cube.position.set(-1.65 + x + (0.1 * x), -1.65 + y + (0.1 * y), -1.65 + z + (0.1 * z));
+            scene.add(cube);
+            cubies.set(`${x},${y},${z}`, cube);
+          }
+        }
+      }
+
+      // Lights
+      const keyLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+      keyLight.position.set(5, 5, 4);
+      scene.add(keyLight);
+      scene.add(new THREE.AmbientLight(0x404040, 0.6));
+
+      addEventListener('resize', () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+
+      window.HyperSudoCube = {scene, camera, renderer, cubies, symbolMaterials, SYMBOLS, COLORS, ORIGIN, THREE};
+    </script>
+    <script type="module">
+      const ANIM_SPEED = 0.1;  // Percent/second
+      const FACES = Object.freeze({
+        Right: 0,  // +x
+        Left: 1,  // -x
+        Front: 2,  // +y
+        Back: 3,  // -y
+        Top: 4,  // +z
+        Bottom: 5  // -z
+      });
+      const SLICES = Object.freeze({
+        XRight: 0,
+        XMidRight: 1,
+        XMidLeft: 2,
+        XLeft: 3,
+        YFront: 4,
+        YMidFront: 5,
+        YMidBack: 6,
+        YBack: 7,
+        ZTop: 8,
+        ZMidTop: 9,
+        ZMidBot: 10,
+        ZBot: 11
+      });
+      const AXES = Object.freeze({
+        X: Symbol('X'),
+        Y: Symbol('Y'),
+        Z: Symbol('Z')
+      });
+      const HyperSudoCube = window.HyperSudoCube;
+      const THREE = HyperSudoCube.THREE;
+
+      function setCubieFace(cubie, face, symbol, color) {
+        if (typeof(face) != 'number' || face < 0 || face > 5) {
+          throw 'Invalid face parameter (should be FACES)';
+        }
+
+        let materialKey = `${symbol},${color}`;
+        if (!HyperSudoCube.symbolMaterials.has(materialKey)) {
+          throw 'Invalid symbol/color parameter combination';
+        }
+
+        cubie.material[face] = HyperSudoCube.symbolMaterials.get(materialKey);
+      }
+
+      (function initCube(state) {
+        // TODO: call WASM core to generate initial state, then update cube materials accordingly
+        for (let x = 0; x < 4; x++) {
+          for (let y = 0; y < 4; y++) {
+            for (let z = 0; z < 4; z++) {
+              // Gather exposed faces
+              let exposedFaces = [];
+              if (x == 0) {
+                exposedFaces.push(FACES.Left);
+              }
+              else if (x == 3) {
+                exposedFaces.push(FACES.Right);
+              }
+              if (y == 0) {
+                exposedFaces.push(FACES.Back);
+              }
+              else if (y == 3) {
+                exposedFaces.push(FACES.Front);
+              }
+              if (z == 0) {
+                exposedFaces.push(FACES.Bottom);
+              }
+              else if (z == 3) {
+                exposedFaces.push(FACES.Top);
+              }
+
+              // Set face symbols (randomly for now)
+              let cubie = HyperSudoCube.cubies.get(`${x},${y},${z}`);
+              exposedFaces.forEach(face => {
+                // Debug (to be replaced by WASM-generated state)
+                let symbol = HyperSudoCube.SYMBOLS[Math.floor(Math.random() * HyperSudoCube.SYMBOLS.length)];
+                let color = HyperSudoCube.COLORS[Math.floor(Math.random() * HyperSudoCube.COLORS.length)];
+
+                setCubieFace(cubie, face, symbol, color);
+              });
+            }
+          }
+        }
+      })();
+
+      function rotateSlice(slice, angle) {
+        if (typeof(slice) != 'number') {
+          throw 'Invalid slice parameter (should be SLICES)';
+        }
+        if (typeof(angle) != 'number') {
+          throw 'Invalid angle parameter (should be a number)';
+        }
+
+        // Choose rotation axis from slice coordinate constraint
+        let x, y, z;
+        let rotation = new THREE.Matrix4();
+        switch (slice) {
+          case SLICES.XRight:
+          case SLICES.XMidRight:
+          case SLICES.XMidLeft:
+          case SLICES.XLeft:
+            x = 3 - slice;
+            rotation = rotation.makeRotationX(angle);
+            break;
+          case SLICES.YFront:
+          case SLICES.YMidFront:
+          case SLICES.YMidBack:
+          case SLICES.YBack:
+            y = 7 - slice;
+            rotation = rotation.makeRotationY(angle);
+            break;
+          case SLICES.ZTop:
+          case SLICES.ZMidTop:
+          case SLICES.ZMidBot:
+          case SLICES.ZBot:
+            z = 11 - slice;
+            rotation = rotation.makeRotationZ(angle);
+            break;
+          default:
+            throw 'Invalid slice parameter (should be SLICES)'
+        }
+
+        // Apply chosen rotation
+        HyperSudoCube.cubies.entries().filter((entry, _) => {
+          let [cx, cy, cz] = entry[0].split(',');
+          return (cx == x) || (cy == y) || (cz == z);
+        }).forEach(([coords, cubie]) => {
+          cubie.position.applyMatrix4(rotation);
+
+          if (x != null) {
+            cubie.rotation.x += angle;
+          }
+          else if (y != null) {
+            cubie.rotation.y += angle;
+          }
+          else {
+            cubie.rotation.z += angle;
+          }
+        });
+      }
+
+      function rotateCube(axis, angle) {
+        let rotation = new THREE.Matrix4();
+        switch (axis) {
+          case AXES.X:
+            rotation = rotation.makeRotationX(angle);
+            break;
+          case AXES.Y:
+            rotation = rotation.makeRotationZ(angle);
+            break;
+          case AXES.Z:
+            rotation = rotation.makeRotationY(angle);
+            break;
+          default:
+            throw 'Invalid axis parameter (should be AXES)';
+        }
+
+        HyperSudoCube.cubies.forEach(cubie => {
+          // Global rotation around origin
+          cubie.position.applyMatrix4(rotation);
+
+          // Local rotation around cubie center
+          switch (axis) {
+            case AXES.X:
+              cubie.rotation.x += angle;
+              break;
+            case AXES.Y:
+              cubie.rotation.z += angle;
+              break;
+            case AXES.Z:
+              cubie.rotation.y += angle;
+              break;
+            default:
+              throw 'Invalid axis (should be AXES)';
+          }
+        });
+      }
+
+      // Controls
+      let rotationAxis, rotationSlice, rotationAngle, rotationFrame;
+      addEventListener('keyup', evt => {
+        if (rotationAngle != null) return;  // Prevent interrupting an active rotation
+
+        let clockwise = !evt.shiftKey;
+        rotationAngle = (Math.PI / 2) * (clockwise ? -1 : 1);
+        rotationFrame = 0;
+
+        // TODO: make these customizable by player (UI)
+        let keyMap = {
+          // Qwerrty key map
+          88: AXES.X,
+          89: AXES.Y,
+          90: AXES.Z,
+          222: SLICES.XLeft,
+          188: SLICES.XMidLeft,
+          190: SLICES.XMidRight,
+          80: SLICES.XRight,
+          65: SLICES.YBack,
+          79: SLICES.YMidBack,
+          69: SLICES.YMidFront,
+          85: SLICES.YFront,
+          186: SLICES.ZBot,
+          81: SLICES.ZMidBot,
+          74: SLICES.ZMidTop,
+          75: SLICES.ZTop
+        };
+        switch (evt.keyCode) {
+          // Cube rotations
+          case 88:
+          case 89:
+          case 90:
+            rotationAxis = keyMap[evt.keyCode];
+            break;
+          // Slice rotations
+          case 222:
+          case 188:
+          case 190:
+          case 80:
+          case 65:
+          case 79:
+          case 69:
+          case 85:
+          case 186:
+          case 81:
+          case 74:
+          case 75:
+            rotationSlice = keyMap[evt.keyCode];
+        }
+      });
+
+      // Start render loop
+      (function animate() {
+        requestAnimationFrame(animate);
+
+        if (rotationAngle != null) {
+          // Advance rotation animation if active
+          if (rotationAxis != null) {
+            let angle = rotationAngle * ANIM_SPEED;
+            rotateCube(rotationAxis, angle);
+          }
+          else if (rotationSlice != null) {
+            let angle = rotationAngle * ANIM_SPEED;
+            try {
+              rotateSlice(rotationSlice, angle);
+            }
+            catch(ex) {
+              rotationSlice = null;
+              throw ex;
+            }
+          }
+
+          // Clear animation if finished
+          if (++rotationFrame == (1 / ANIM_SPEED)) {
+            rotationAxis = rotationSlice = rotationAngle = rotationFrame = null;
+          }
+        }
+
+        HyperSudoCube.renderer.render(HyperSudoCube.scene, HyperSudoCube.camera);
+      })();
+    </script>
+  </body>
+</html>
