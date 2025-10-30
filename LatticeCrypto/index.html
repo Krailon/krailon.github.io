@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="StackCanary">
+    <meta name="description" content="Post-Quantum lattice cryptography webapp currently implementing the New Hope RLWE Key Exchange protocol with more to come">
+    <meta name="keywords" content="lattice,crypto,cryptography,rlwe">
     <!-- TODO: favicon //-->
     <title>RLWE Tools</title>
     <style>
@@ -177,7 +180,7 @@
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer></script>
     <script type="module">
-      import init, { add_polynomials, sub_polynomials, mul_polynomials, js_rlwe_kex_initiate, js_rlwe_kex_respond, js_rlwe_kex_finish } from "./fhe.js";
+      import init, { add_polynomials, sub_polynomials, mul_polynomials, js_rlwe_kex_initiate, js_rlwe_kex_respond, js_rlwe_kex_finish } from "./wasm/fhe.js";
 
       await init();
       console.log("RUST_BACKTRACE=1");
